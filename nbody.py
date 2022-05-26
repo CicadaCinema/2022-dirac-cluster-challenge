@@ -108,7 +108,8 @@ def calc_acc(acc, pos, mass):
     epsilon_squared = (1.1*np.power(len(pos), -0.48)) ** 2
     for i in numba.prange(len(pos)):
         r = pos[:, :] - pos[i, :]
-        acc[i, :] = np.sum(r.T * mass / (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon_squared) ** (1.5), axis=1)
+        dr = (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon_squared) ** (1.5)
+        acc[i, :] = np.sum(r.T * mass /dr, axis=1)
 
 def advance_pos(acc, pos, pos_prev, pos_temp, dt):
     """
