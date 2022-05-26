@@ -94,7 +94,7 @@ def create_solar_system():
 
     return pos, vel, mass
 
-#@numba.njit(parallel=True)
+@numba.njit(parallel=True)
 def calc_acc(acc, pos, mass):
     """
     Accumulate gravitational forces and calculate acceleration. This uses a very simple method which directly calculates the gravitational interaction between every single pair of bodies.
@@ -194,7 +194,7 @@ def run(is_solar_system=False, plot=False, n_particles=8):
 
 
 if __name__ == "__main__":
-    #numba.set_num_threads(4)
+    numba.set_num_threads(4)
 
     n_particle_range = [8, 16, 32, 64, 128]
     #runtimes = [run(n_particles=n) for n in n_particle_range]
