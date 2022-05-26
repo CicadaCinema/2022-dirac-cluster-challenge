@@ -5,17 +5,19 @@ from numpy.random import default_rng
 from scipy.constants import gravitational_constant as G
 import matplotlib.pyplot as plt
 from time import perf_counter
+import numba
 
 
 N_YEARS = 0.1
 FP_TYPE = np.float64
+SEED = 12345
 
 
 def random(num, a=0., b=1.):
     """
     Generate a random number between a and b
     """
-    rng = default_rng()
+    rng = default_rng(SEED)
     return rng.random(num, dtype=FP_TYPE)*(b-a) + a
 
 
@@ -92,7 +94,7 @@ def create_solar_system():
 
     return pos, vel, mass
 
-
+#@numba.njit(parallel=True)
 def calc_acc(acc, pos, mass):
     """
     Accumulate gravitational forces and calculate acceleration. This uses a very simple method which directly calculates the gravitational interaction between every single pair of bodies.
@@ -104,10 +106,9 @@ def calc_acc(acc, pos, mass):
     """
 
     epsilon = 1.1*np.power(len(pos), -0.48)
-    for i in range(len(pos)):
-        r = pos[:,:] - pos[i,:]
-        acc[i,:] = np.sum(r.T*mass/(r[:,0]**2 + r[:,1]**2 + epsilon**2)**(1.5), axis=1)
-
+    for i in numba.prange(len(pos)):
+        r = pos[:, :] - pos[i, :]
+        acc[i, :] = np.sum(r.T * mass / (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon ** 2) ** (1.5), axis=1)
 
 def advance_pos(acc, pos, pos_prev, pos_temp, dt):
     """
@@ -132,8 +133,10 @@ def run(is_solar_system=False, plot=False, n_particles=8):
 
     if is_solar_system:
         print("Running regular solar system")
+        pos, vel, mass = create_solar_system()
     else:
         print(f"Running with {n_particles} particles")
+        pos, vel, mass = generate_random_star_system(n_particles)
 
     dt = 0.01
     total_time = 10000*dt
@@ -141,8 +144,6 @@ def run(is_solar_system=False, plot=False, n_particles=8):
     pos_tracker = []
 
     # Load initial conditions
-    # pos, vel, mass = create_solar_system()
-    pos, vel, mass = generate_random_star_system(n_particles)
     acc = np.zeros_like(pos)
     pos_temp = np.zeros_like(pos)
     pos_prev = np.zeros_like(pos)
@@ -193,8 +194,10 @@ def run(is_solar_system=False, plot=False, n_particles=8):
 
 
 if __name__ == "__main__":
-    n_particle_range = [8, 16, 32, 64, 128]
-    runtimes = [run(n_particles=n) for n in n_particle_range]
+    #numba.set_num_threads(4)
 
+    n_particle_range = [8, 16, 32, 64, 128]
+    #runtimes = [run(n_particles=n) for n in n_particle_range]
+    run(plot=False, n_particles=30)
     print(n_particle_range)
-    print(runtimes)
+    #print(runtimes)
