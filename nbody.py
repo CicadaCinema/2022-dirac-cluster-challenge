@@ -94,7 +94,6 @@ def create_solar_system():
 
     return pos, vel, mass
 
-@numba.njit(parallel=True)
 def calc_acc(acc, pos, mass):
     """
     Accumulate gravitational forces and calculate acceleration. This uses a very simple method which directly calculates the gravitational interaction between every single pair of bodies.
@@ -105,27 +104,10 @@ def calc_acc(acc, pos, mass):
         mass: masses of all bodies
     """
 
-    epsilon_squared = (1.1*np.power(len(pos), -0.48)) ** 2
-    for i in numba.prange(len(pos)):
+    epsilon = 1.1*np.power(len(pos), -0.48)
+    for i in range(len(pos)):
         r = pos[:, :] - pos[i, :]
-
-        # dr=(r[:,0]**2 + r[:,1]**2+ epsilon_squared)**(1.5)
-
-        # acc[i,:] = np.sum(r.T*mass/dr, axis=1)
-        rx = 0
-        ry = 0
-        for j in numba.prange(len(pos)):
-            rx += r[j, 0] * mass[j] / (r[j, 0] ** 2 + r[j, 1] ** 2 + epsilon_squared) ** (1.5)
-            ry += r[j, 1] * mass[j] / (r[j, 0] ** 2 + r[j, 1] ** 2 + epsilon_squared) ** (1.5)
-
-        acc[i, 0] = rx
-        acc[i, 1] = ry
-        # acc_sum[:]=0
-        # for j in numba.prange(len(pos))
-        #    acc_sum[:]=
-        # acc[i,:]=acc_sum[:]
-        # acc[i,:] = np.sum(r.T*mass/(r[:,0]**2 + r[:,1]**2 + epsilon**2)**(1.5), axis=1)
-
+        acc[i, :] = np.sum(r.T * mass / (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon ** 2) ** (1.5), axis=1)
 
 def advance_pos(acc, pos, pos_prev, pos_temp, dt):
     """
@@ -205,16 +187,16 @@ def run(is_solar_system=False, plot=False, n_particles=8):
         ymin = -ymax
         plt.xlim(xmin, xmax)
         plt.ylim(ymin, ymax)
-        plt.show()
+        plt.savefig("out.png")
 
     return completion_time
 
 
 if __name__ == "__main__":
-    numba.set_num_threads(4)
+    #numba.set_num_threads(4)
 
     n_particle_range = [8, 16, 32, 64, 128]
     #runtimes = [run(n_particles=n) for n in n_particle_range]
-    run(plot=False, n_particles=30)
+    run(plot=True, n_particles=300)
     print(n_particle_range)
     #print(runtimes)
