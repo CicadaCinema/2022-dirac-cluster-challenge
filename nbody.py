@@ -6,6 +6,7 @@ from scipy.constants import gravitational_constant as G
 import matplotlib.pyplot as plt
 from time import perf_counter
 import numba
+from numba import cuda
 
 
 N_YEARS = 0.1
@@ -94,20 +95,51 @@ def create_solar_system():
 
     return pos, vel, mass
 
+"""
+@cuda.jit
+def vec_gpu(acc, pos, mass, epsilon):
+    i = cuda.grid(1)
+    if i < pos.size:
+        r = pos[:, :] - pos[i, :]
+        acc[i, :] = np.sum(r.T * mass / (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon ** 2) ** (1.5), axis=1)
+
+
 def calc_acc(acc, pos, mass):
-    """
-    Accumulate gravitational forces and calculate acceleration. This uses a very simple method which directly calculates the gravitational interaction between every single pair of bodies.
-
-    Args:
-        acc: array to be updated with new accelerations
-        pos: current positions of all bodies
-        mass: masses of all bodies
-    """
-
     epsilon = 1.1*np.power(len(pos), -0.48)
+
+    threadsperblock = 256
+    blockspergrid = (pos.size + threadsperblock - 1)
+    print("threadsperblock, blockspergrid")
+    print(threadsperblock, blockspergrid)
+    #vec_gpu[blockspergrid, threadsperblock](acc, pos, mass, epsilon)
+
     for i in range(len(pos)):
         r = pos[:, :] - pos[i, :]
         acc[i, :] = np.sum(r.T * mass / (r[:, 0] ** 2 + r[:, 1] ** 2 + epsilon ** 2) ** (1.5), axis=1)
+"""
+
+
+def calc_acc(acc, pos, mass):
+    epsilon_squared = (1.1*np.power(len(pos), -0.48)) ** 2
+    for i in range(len(pos)):
+        r = pos[:, :] - pos[i, :]
+
+        # dr=(r[:,0]**2 + r[:,1]**2+ epsilon_squared)**(1.5)
+
+        # acc[i,:] = np.sum(r.T*mass/dr, axis=1)
+        rx = 0
+        ry = 0
+        for j in range(len(pos)):
+            rx += r[j, 0] * mass[j] / (r[j, 0] ** 2 + r[j, 1] ** 2 + epsilon_squared) ** (1.5)
+            ry += r[j, 1] * mass[j] / (r[j, 0] ** 2 + r[j, 1] ** 2 + epsilon_squared) ** (1.5)
+
+        acc[i, 0] = rx
+        acc[i, 1] = ry
+        # acc_sum[:]=0
+        # for j in numba.prange(len(pos))
+        #    acc_sum[:]=
+        # acc[i,:]=acc_sum[:]
+        # acc[i,:] = np.sum(r.T*mass/(r[:,0]**2 + r[:,1]**2 + epsilon**2)**(1.5), axis=1)
 
 def advance_pos(acc, pos, pos_prev, pos_temp, dt):
     """
@@ -197,6 +229,6 @@ if __name__ == "__main__":
 
     n_particle_range = [8, 16, 32, 64, 128]
     #runtimes = [run(n_particles=n) for n in n_particle_range]
-    run(plot=True, n_particles=300)
+    run(plot=True, n_particles=30)
     print(n_particle_range)
     #print(runtimes)
